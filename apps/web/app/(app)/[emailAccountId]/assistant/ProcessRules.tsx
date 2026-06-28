@@ -41,6 +41,10 @@ import {
 } from "@/utils/ai/choose-rule/selection-metadata-summary";
 import { useRules } from "@/hooks/useRules";
 import { useInfiniteMessages } from "@/hooks/useMessages";
+import {
+  DebugPanel,
+  type DebugSession,
+} from "@/app/(app)/[emailAccountId]/assistant/DebugPanel";
 
 type Message = MessagesResponse["messages"][number];
 
@@ -104,6 +108,9 @@ export function ProcessRulesContent({ testMode }: { testMode: boolean }) {
   const [resultsMap, setResultsMap] = useState<
     Record<string, RunRulesResult[]>
   >({});
+  const [debugOpen, setDebugOpen] = useState(false);
+  const [debugSession, setDebugSession] = useState<DebugSession | null>(null);
+  const debugTimersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
   const handledThreadsRef = useRef(new Set<string>());
 
   // Merge existing rules with results
@@ -130,12 +137,50 @@ export function ProcessRulesContent({ testMode }: { testMode: boolean }) {
     async (message: Message, rerun?: boolean) => {
       setIsRunning((prev) => ({ ...prev, [message.id]: true }));
 
+      // Clear any timers from a previous test run
+      debugTimersRef.current.forEach(clearTimeout);
+      debugTimersRef.current = [];
+
+      const startedAt = Date.now();
+      if (testMode) {
+        setDebugSession({
+          message,
+          startedAt,
+          status: "running",
+          completedStages: 0,
+        });
+        setDebugOpen(true);
+
+        // Advance pipeline stages on realistic timers:
+        //  0→1 Fetch message (~300ms), 1→2 Load rules (~700ms), 2→3 Static matching (~1100ms)
+        // Stage 3 (AI) stays "running" until the actual result arrives.
+        const advance = (n: number, delay: number) =>
+          setTimeout(
+            () =>
+              setDebugSession((prev) =>
+                prev?.status === "running"
+                  ? { ...prev, completedStages: n }
+                  : prev,
+              ),
+            delay,
+          );
+        debugTimersRef.current = [
+          advance(1, 300),
+          advance(2, 700),
+          advance(3, 1100),
+        ];
+      }
+
       const result = await runRulesAction(emailAccountId, {
         messageId: message.id,
         threadId: message.threadId,
         isTest: testMode,
         rerun,
       });
+      const completedAt = Date.now();
+      debugTimersRef.current.forEach(clearTimeout);
+      debugTimersRef.current = [];
+
       const logContext = {
         emailAccountId,
         messageId: message.id,
@@ -152,6 +197,18 @@ export function ProcessRulesContent({ testMode }: { testMode: boolean }) {
           title: "There was an error processing the email",
           description: result.serverError,
         });
+        if (testMode) {
+          setDebugSession((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  status: "error",
+                  error: result.serverError,
+                  completedAt,
+                }
+              : null,
+          );
+        }
       } else if (result?.data) {
         const resultSummary = summarizeRunRulesResult(result.data);
         logger.info("runRulesAction returned results", {
@@ -165,8 +222,32 @@ export function ProcessRulesContent({ testMode }: { testMode: boolean }) {
           ),
         });
         setResultsMap((prev) => ({ ...prev, [message.id]: result.data! }));
+        if (testMode) {
+          setDebugSession((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  status: "complete",
+                  results: result.data!,
+                  completedAt,
+                }
+              : null,
+          );
+        }
       } else {
         logger.warn("runRulesAction returned empty response", logContext);
+        if (testMode) {
+          setDebugSession((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  status: "error",
+                  error: "Empty response",
+                  completedAt,
+                }
+              : null,
+          );
+        }
       }
       setIsRunning((prev) => ({ ...prev, [message.id]: false }));
     },
@@ -291,51 +372,65 @@ export function ProcessRulesContent({ testMode }: { testMode: boolean }) {
         </div>
       )}
 
-      <LoadingContent
-        loading={isLoading}
-        error={error}
-        loadingComponent={<ProcessRulesLoading />}
-      >
-        {messages.length === 0 ? (
-          <MutedText className="p-4 text-center">No emails found</MutedText>
-        ) : (
-          <Card>
-            <Table>
-              <TableBody>
-                {messages.map((message) => (
-                  <ProcessRulesRow
-                    key={message.id}
-                    message={message}
-                    userEmail={userEmail}
-                    isRunning={isRunning[message.id]}
-                    results={allResults[message.id]}
-                    onRun={(rerun) => onRun(message, rerun)}
-                    testMode={testMode}
-                    setInput={setInput}
-                  />
-                ))}
-              </TableBody>
-            </Table>
+      {/* When the debug panel is open, negate the content-container right padding so
+          the split-pane uses the full available width of the SidebarInset. */}
+      <div className={cn("flex items-start", debugOpen && "-mr-2 sm:-mr-6")}>
+        <div className="min-w-0 flex-1">
+          <LoadingContent
+            loading={isLoading}
+            error={error}
+            loadingComponent={<ProcessRulesLoading />}
+          >
+            {messages.length === 0 ? (
+              <MutedText className="p-4 text-center">No emails found</MutedText>
+            ) : (
+              <Card>
+                <Table>
+                  <TableBody>
+                    {messages.map((message) => (
+                      <ProcessRulesRow
+                        key={message.id}
+                        message={message}
+                        userEmail={userEmail}
+                        isRunning={isRunning[message.id]}
+                        results={allResults[message.id]}
+                        onRun={(rerun) => onRun(message, rerun)}
+                        testMode={testMode}
+                        setInput={setInput}
+                      />
+                    ))}
+                  </TableBody>
+                </Table>
 
-            <div className="mx-4 mb-4">
-              <Button
-                variant="outline"
-                className="w-full"
-                onClick={onLoadMore}
-                loading={isValidating}
-                disabled={!hasMore || isValidating}
-              >
-                {!isValidating && <ChevronsDownIcon className="mr-2 size-4" />}
-                {isValidating
-                  ? "Loading..."
-                  : hasMore
-                    ? "Load More"
-                    : "No More Messages"}
-              </Button>
-            </div>
-          </Card>
-        )}
-      </LoadingContent>
+                <div className="mx-4 mb-4">
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    onClick={onLoadMore}
+                    loading={isValidating}
+                    disabled={!hasMore || isValidating}
+                  >
+                    {!isValidating && (
+                      <ChevronsDownIcon className="mr-2 size-4" />
+                    )}
+                    {isValidating
+                      ? "Loading..."
+                      : hasMore
+                        ? "Load More"
+                        : "No More Messages"}
+                  </Button>
+                </div>
+              </Card>
+            )}
+          </LoadingContent>
+        </div>
+
+        <DebugPanel
+          session={debugSession}
+          open={debugOpen}
+          onClose={() => setDebugOpen(false)}
+        />
+      </div>
     </div>
   );
 }
