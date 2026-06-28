@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import {
   AlertCircleIcon,
   CheckCircle2Icon,
+  ChevronRightIcon,
   CircleDashedIcon,
   CircleDotIcon,
   XIcon,
@@ -24,6 +25,15 @@ import { getActionColor } from "@/components/PlanBadge";
 import { useAccount } from "@/providers/EmailAccountProvider";
 import { getRuleResultReasonDisplay } from "@/app/(app)/[emailAccountId]/assistant/ResultDisplay";
 import type { MessagesResponse } from "@/app/api/messages/route";
+import {
+  Collapsible,
+  CollapsibleTrigger,
+  CollapsibleContent,
+} from "@/components/ui/collapsible";
+import type {
+  MatchReason,
+  RuleSelectionMetadata,
+} from "@/utils/ai/choose-rule/types";
 
 type Message = MessagesResponse["messages"][number];
 
@@ -189,6 +199,7 @@ export function DebugPanel({
   const elapsed = useElapsed(session);
   const stages = session ? deriveStages(session) : [];
   const { provider } = useAccount();
+  const [rawOutputOpen, setRawOutputOpen] = useState(false);
 
   return (
     // Outer: animated width — inline style guarantees the value is applied,
@@ -257,6 +268,11 @@ export function DebugPanel({
                   <MonoRow label="threadId" value={session.message.threadId} />
                   <MonoRow label="isTest" value="true" />
                 </div>
+                {session.message.snippet && (
+                  <p className="mt-2 line-clamp-3 rounded-md bg-muted/30 px-3 py-2 text-xs italic text-muted-foreground">
+                    {session.message.snippet}
+                  </p>
+                )}
               </section>
             )}
 
@@ -308,6 +324,13 @@ export function DebugPanel({
               </section>
             )}
 
+            {/* Evaluation funnel */}
+            {session?.status === "complete" && (
+              <EvaluationSection
+                metadata={session.results?.[0]?.selectionMetadata}
+              />
+            )}
+
             {/* Error */}
             {session?.status === "error" && (
               <section>
@@ -325,6 +348,31 @@ export function DebugPanel({
                 </div>
               </section>
             )}
+
+            {/* Raw output */}
+            {session?.status === "complete" && session.results && (
+              <section>
+                <Collapsible
+                  open={rawOutputOpen}
+                  onOpenChange={setRawOutputOpen}
+                >
+                  <CollapsibleTrigger className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
+                    <ChevronRightIcon
+                      className={cn(
+                        "size-3 transition-transform",
+                        rawOutputOpen && "rotate-90",
+                      )}
+                    />
+                    Raw output
+                  </CollapsibleTrigger>
+                  <CollapsibleContent>
+                    <pre className="mt-1 max-h-60 overflow-auto rounded-md bg-muted/30 p-2 font-mono text-xs">
+                      {JSON.stringify(session.results, null, 2)}
+                    </pre>
+                  </CollapsibleContent>
+                </Collapsible>
+              </section>
+            )}
           </div>
         </div>
       </div>
@@ -339,18 +387,66 @@ function ResultSummary({
   result: RunRulesResult;
   provider: string;
 }) {
+  const [conditionsOpen, setConditionsOpen] = useState(false);
+
   const { rule, status, reason } = result;
   const reasonDisplay = getRuleResultReasonDisplay(reason ?? "");
   const skippedRuleNames =
     result.selectionMetadata?.skippedThreadRuleNames ?? [];
   const visibleActions = getVisibleActions(result.actionItems ?? []);
 
+  const hasConditions = !!(
+    rule &&
+    (rule.from || rule.to || rule.subject || rule.body || rule.instructions)
+  );
+
   return (
     <div className="rounded-md border p-3 space-y-3">
-      {/* Rule name */}
-      <div className="font-medium text-sm">
+      {/* Rule name + existing indicator */}
+      <div className="flex flex-wrap items-center gap-2 text-sm font-medium">
         {rule ? rule.name : "No match found"}
+        {result.existing && <Badge color="yellow">Previously applied</Badge>}
       </div>
+
+      {/* Match reason chips */}
+      {result.matchReasons && result.matchReasons.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {result.matchReasons.map((matchReason, i) => (
+            <MatchReasonBadge key={i} reason={matchReason} />
+          ))}
+        </div>
+      )}
+
+      {/* Rule conditions collapsible */}
+      {hasConditions && (
+        <Collapsible open={conditionsOpen} onOpenChange={setConditionsOpen}>
+          <CollapsibleTrigger className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
+            <ChevronRightIcon
+              className={cn(
+                "size-3 transition-transform",
+                conditionsOpen && "rotate-90",
+              )}
+            />
+            Rule conditions
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <div className="mt-2 rounded-md border bg-muted/30 p-3 font-mono text-xs space-y-1.5">
+              {rule!.from && <MonoRow label="from" value={rule!.from} />}
+              {rule!.to && <MonoRow label="to" value={rule!.to} />}
+              {rule!.subject && (
+                <MonoRow label="subject" value={rule!.subject} />
+              )}
+              {rule!.body && <MonoRow label="body" value={rule!.body} />}
+              {rule!.instructions && (
+                <MonoRow label="instructions" value={rule!.instructions} />
+              )}
+              {rule!.conditionalOperator && (
+                <MonoRow label="operator" value={rule!.conditionalOperator} />
+              )}
+            </div>
+          </CollapsibleContent>
+        </Collapsible>
+      )}
 
       {/* Actions */}
       {visibleActions.length > 0 ? (
@@ -413,5 +509,117 @@ function MonoRow({ label, value }: { label: string; value: string }) {
       <span className="shrink-0 text-muted-foreground">{label}:</span>
       <span className="min-w-0 break-all text-foreground">{value}</span>
     </div>
+  );
+}
+
+function MatchReasonBadge({ reason }: { reason: MatchReason }) {
+  switch (reason.type) {
+    case "STATIC":
+      return <Badge color="gray">Static condition</Badge>;
+    case "LEARNED_PATTERN":
+      return (
+        <Badge color="purple">
+          {reason.group.name} › {reason.groupItem.value}
+        </Badge>
+      );
+    case "AI":
+      return <Badge color="blue">AI match</Badge>;
+    case "PRESET":
+      return <Badge color="gray">{capitalCase(reason.systemType)}</Badge>;
+    default:
+      return null;
+  }
+}
+
+const EVAL_BORDER: Record<"blue" | "orange" | "red" | "yellow", string> = {
+  blue: "border-blue-400",
+  orange: "border-orange-400",
+  red: "border-red-400",
+  yellow: "border-yellow-400",
+};
+
+function EvalRow({
+  label,
+  color,
+  children,
+}: {
+  label: string;
+  color: keyof typeof EVAL_BORDER;
+  children: React.ReactNode;
+}) {
+  return (
+    <div
+      className={cn(
+        "rounded-r-md border-l-2 bg-muted/30 px-3 py-2 text-xs",
+        EVAL_BORDER[color],
+      )}
+    >
+      <span className="font-medium text-foreground">{label}: </span>
+      <span className="text-muted-foreground">{children}</span>
+    </div>
+  );
+}
+
+function EvaluationSection({
+  metadata,
+}: {
+  metadata: RuleSelectionMetadata | undefined;
+}) {
+  if (!metadata) return null;
+
+  const {
+    isThread,
+    continuedThreadRuleNames,
+    remainingAiRuleNames,
+    learnedPatternExcludedRules,
+    filteredConversationRuleNames,
+    conversationFilterReason,
+  } = metadata;
+
+  const hasData =
+    isThread ||
+    continuedThreadRuleNames.length > 0 ||
+    remainingAiRuleNames.length > 0 ||
+    learnedPatternExcludedRules.length > 0 ||
+    filteredConversationRuleNames.length > 0;
+
+  if (!hasData) return null;
+
+  return (
+    <section>
+      <SectionLabel>Evaluation</SectionLabel>
+      <div className="space-y-1.5">
+        {isThread && (
+          <EvalRow label="Thread context" color="blue">
+            Thread reply
+          </EvalRow>
+        )}
+        {continuedThreadRuleNames.length > 0 && (
+          <EvalRow label="Thread continued" color="blue">
+            {continuedThreadRuleNames.join(", ")}
+          </EvalRow>
+        )}
+        {remainingAiRuleNames.length > 0 && (
+          <EvalRow label="AI candidates" color="orange">
+            {remainingAiRuleNames.join(", ")}
+          </EvalRow>
+        )}
+        {learnedPatternExcludedRules.map((e, i) => (
+          <EvalRow key={i} label="Pattern blocked" color="red">
+            {e.ruleName} via {e.groupName}: {e.itemValue}
+          </EvalRow>
+        ))}
+        {filteredConversationRuleNames.length > 0 && (
+          <EvalRow label="Conv. filtered" color="yellow">
+            {filteredConversationRuleNames.join(", ")}
+            {conversationFilterReason && (
+              <span className="ml-1">
+                ({capitalCase(conversationFilterReason)})
+              </span>
+            )}
+          </EvalRow>
+        )}
+      </div>
+    </section>
   );
 }

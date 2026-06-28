@@ -45,6 +45,7 @@ import {
   DebugPanel,
   type DebugSession,
 } from "@/app/(app)/[emailAccountId]/assistant/DebugPanel";
+import { EmailPreviewPanel } from "@/app/(app)/[emailAccountId]/assistant/EmailPreviewPanel";
 
 type Message = MessagesResponse["messages"][number];
 
@@ -110,6 +111,7 @@ export function ProcessRulesContent({ testMode }: { testMode: boolean }) {
   >({});
   const [debugOpen, setDebugOpen] = useState(false);
   const [debugSession, setDebugSession] = useState<DebugSession | null>(null);
+  const [selectedMessage, setSelectedMessage] = useState<Message | null>(null);
   const debugTimersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
   const handledThreadsRef = useRef(new Set<string>());
 
@@ -325,57 +327,66 @@ export function ProcessRulesContent({ testMode }: { testMode: boolean }) {
 
   return (
     <div>
-      <div className="flex items-center justify-between gap-2 pb-6">
-        <div className="flex items-center gap-2">
-          {isRunningAll ? (
-            <Button onClick={handleStop} variant="outline" size="sm">
-              <PauseIcon className="mr-2 size-4" />
-              Stop
-            </Button>
-          ) : (
-            <Button onClick={handleRunAll} size="sm">
-              <BookOpenCheckIcon className="mr-2 size-4" />
-              {testMode ? "Test All" : "Run on All"}
-            </Button>
-          )}
+      {/* Header: padded independently so the three-column layout below can go edge-to-edge */}
+      <div className="px-2 sm:px-6">
+        <div className="flex items-center justify-between gap-2 pb-6">
+          <div className="flex items-center gap-2">
+            {isRunningAll ? (
+              <Button onClick={handleStop} variant="outline" size="sm">
+                <PauseIcon className="mr-2 size-4" />
+                Stop
+              </Button>
+            ) : (
+              <Button onClick={handleRunAll} size="sm">
+                <BookOpenCheckIcon className="mr-2 size-4" />
+                {testMode ? "Test All" : "Run on All"}
+              </Button>
+            )}
+          </div>
+
+          <div className="flex items-center gap-2">
+            {testMode && (
+              <Button
+                variant="ghost"
+                onClick={() => setShowCustomForm((show) => !show)}
+                size="sm"
+              >
+                <PenSquareIcon className="mr-2 size-4" />
+                Custom
+              </Button>
+            )}
+            <SearchForm
+              defaultQuery={searchQuery || undefined}
+              onSearch={setSearchQuery}
+            />
+          </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          {testMode && (
-            <Button
-              variant="ghost"
-              onClick={() => setShowCustomForm((show) => !show)}
-              size="sm"
-            >
-              <PenSquareIcon className="mr-2 size-4" />
-              Custom
-            </Button>
-          )}
-          <SearchForm
-            defaultQuery={searchQuery || undefined}
-            onSearch={setSearchQuery}
-          />
-        </div>
+        {showCustomForm && testMode && (
+          <div className="my-2 space-y-2">
+            {!hasAiRules && (
+              <Alert variant="destructive">
+                <AlertDescription>
+                  You don't have any AI rules set up. The test won't match
+                  anything. Please create AI rules first.
+                </AlertDescription>
+              </Alert>
+            )}
+            <TestCustomEmailForm />
+          </div>
+        )}
       </div>
 
-      {showCustomForm && testMode && (
-        <div className="my-2 space-y-2">
-          {!hasAiRules && (
-            <Alert variant="destructive">
-              <AlertDescription>
-                You don't have any AI rules set up. The test won't match
-                anything. Please create AI rules first.
-              </AlertDescription>
-            </Alert>
+      {/* Three-column layout fills the full SidebarInset width.
+          The email list column carries the same left padding as the header above.
+          Right padding is dropped when panels are open so they extend to the edge. */}
+      <div className="flex items-start">
+        <div
+          className={cn(
+            "min-w-0 flex-1 pl-2 sm:pl-6",
+            !selectedMessage && !debugOpen && "pr-2 sm:pr-6",
           )}
-          <TestCustomEmailForm />
-        </div>
-      )}
-
-      {/* When the debug panel is open, negate the content-container right padding so
-          the split-pane uses the full available width of the SidebarInset. */}
-      <div className={cn("flex items-start", debugOpen && "-mr-2 sm:-mr-6")}>
-        <div className="min-w-0 flex-1">
+        >
           <LoadingContent
             loading={isLoading}
             error={error}
@@ -397,6 +408,12 @@ export function ProcessRulesContent({ testMode }: { testMode: boolean }) {
                         onRun={(rerun) => onRun(message, rerun)}
                         testMode={testMode}
                         setInput={setInput}
+                        isSelected={selectedMessage?.id === message.id}
+                        onSelect={() =>
+                          setSelectedMessage((prev) =>
+                            prev?.id === message.id ? null : message,
+                          )
+                        }
                       />
                     ))}
                   </TableBody>
@@ -424,6 +441,12 @@ export function ProcessRulesContent({ testMode }: { testMode: boolean }) {
             )}
           </LoadingContent>
         </div>
+
+        <EmailPreviewPanel
+          message={selectedMessage}
+          open={!!selectedMessage}
+          onClose={() => setSelectedMessage(null)}
+        />
 
         <DebugPanel
           session={debugSession}
@@ -484,6 +507,8 @@ function ProcessRulesRow({
   onRun,
   testMode,
   setInput,
+  isSelected,
+  onSelect,
 }: {
   message: Message;
   userEmail: string;
@@ -492,16 +517,31 @@ function ProcessRulesRow({
   onRun: (rerun?: boolean) => void;
   testMode: boolean;
   setInput: (input: string) => void;
+  isSelected?: boolean;
+  onSelect?: () => void;
 }) {
   return (
     <TableRow
-      className={
-        isRunning ? "animate-pulse bg-blue-50 dark:bg-blue-950/20" : undefined
-      }
+      className={cn(
+        isRunning && "animate-pulse bg-blue-50 dark:bg-blue-950/20",
+        isSelected && !isRunning && "bg-muted/40 dark:bg-muted/20",
+      )}
     >
       <TableCell>
         <div className="flex items-center justify-between gap-4">
-          <div className="min-w-0 flex-1">
+          <div
+            role={onSelect ? "button" : undefined}
+            tabIndex={onSelect ? 0 : undefined}
+            className={cn("min-w-0 flex-1", onSelect && "cursor-pointer")}
+            onClick={onSelect}
+            onKeyDown={
+              onSelect
+                ? (e) => {
+                    if (e.key === "Enter" || e.key === " ") onSelect();
+                  }
+                : undefined
+            }
+          >
             <EmailMessageCell
               sender={message.headers.from}
               subject={message.headers.subject}
