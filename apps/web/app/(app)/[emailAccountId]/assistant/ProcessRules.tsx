@@ -378,9 +378,14 @@ export function ProcessRulesContent({ testMode }: { testMode: boolean }) {
       </div>
 
       {/* Three-column layout fills the full SidebarInset width.
-          The email list column carries the same left padding as the header above.
-          Right padding is dropped when panels are open so they extend to the edge. */}
-      <div className="flex items-start">
+          Negative right margin cancels PageWrapper's responsive right padding
+          (px-4 xl:px-20 2xl:px-36) so panels reach the true window edge. */}
+      <div
+        className={cn(
+          "flex items-start",
+          (selectedMessage || debugOpen) && "-mr-4 xl:-mr-20 2xl:-mr-36",
+        )}
+      >
         <div
           className={cn(
             "min-w-0 flex-1 pl-2 sm:pl-6",

@@ -1,5 +1,6 @@
 "use client";
 
+// NOT USED — the active test/rules/history/settings UI is AutomationTabs in ../automation/AutomationTabs.tsx
 import { XIcon } from "lucide-react";
 import { useCallback } from "react";
 import { useQueryState } from "nuqs";
