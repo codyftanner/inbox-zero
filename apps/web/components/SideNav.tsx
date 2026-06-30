@@ -21,6 +21,7 @@ import {
   MailsIcon,
   MessageSquareIcon,
   MessagesSquareIcon,
+  NetworkIcon,
   PenIcon,
   PersonStandingIcon,
   RatioIcon,
@@ -170,10 +171,22 @@ export const useNavigation = () => {
     [currentEmailAccountId, showMeetingBriefs, showIntegrations],
   );
 
+  const graphItems: NavItem[] = useMemo(
+    () => [
+      {
+        name: "Capability Demos",
+        href: prefixPath(currentEmailAccountId, "/graph-demos"),
+        icon: NetworkIcon,
+      },
+    ],
+    [currentEmailAccountId],
+  );
+
   return {
     manageItems,
     cleanupItems,
     moreItems,
+    graphItems,
   };
 };
 
@@ -293,6 +306,10 @@ export function SideNav({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   items={navigation.cleanupItems}
                   activeHref={path}
                 />
+              </SidebarGroup>
+              <SidebarGroup>
+                <SidebarGroupLabel>Microsoft Graph</SidebarGroupLabel>
+                <SideNavMenu items={navigation.graphItems} activeHref={path} />
               </SidebarGroup>
               <SidebarGroup>
                 <SidebarGroupLabel asChild>
