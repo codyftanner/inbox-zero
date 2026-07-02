@@ -54,14 +54,21 @@ export interface ParsedMessage {
   bodyContentType?: "text" | "html"; // For Outlook: indicates which format the body was originally in
   conversationIndex?: string | null;
   date: string;
+  // For Outlook (local provider): Outlook-specific metadata from olkparse
+  dueDate?: string | null;
   externalUrl?: string;
+  hasReminder?: boolean;
   headers: ParsedMessageHeaders;
   historyId: string;
   id: string;
   inline: Inline[];
   internalDate?: string | null;
+  isCalendar?: boolean;
+  isOutgoing?: boolean;
   labelIds?: string[];
+  mentionedMe?: boolean;
   parentFolderId?: string;
+  partiallyDownloaded?: boolean;
   // For Outlook: store raw recipient data to avoid double conversion
   rawRecipients?: {
     from?: NullableOption<Recipient>;
@@ -73,6 +80,7 @@ export interface ParsedMessage {
   textHtml?: string;
   textPlain?: string;
   threadId: string;
+  threadTopic?: string;
 }
 
 export interface Attachment {
@@ -135,4 +143,9 @@ export type EmailForLLM = {
     mimeType: string;
     size: number;
   }>;
+  flagged?: boolean;
+  // Outlook-specific signals passed through from olkparse via LocalProvider
+  mentionedMe?: boolean;
+  hasReminder?: boolean;
+  isCalendar?: boolean;
 };

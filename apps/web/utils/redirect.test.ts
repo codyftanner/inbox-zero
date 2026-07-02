@@ -60,15 +60,15 @@ describe("buildRedirectUrl", () => {
 });
 
 describe("buildLoginRedirectUrl", () => {
-  it("preserves an internal next path", () => {
+  it("redirects login attempts to the Graph demo with an internal next path", () => {
     expect(buildLoginRedirectUrl("/automation?tab=settings")).toBe(
-      "/login?next=%2Fautomation%3Ftab%3Dsettings",
+      "/graph-demos?next=%2Fautomation%3Ftab%3Dsettings",
     );
   });
 
   it("drops invalid next paths", () => {
     expect(buildLoginRedirectUrl("https://example.com/automation")).toBe(
-      "/login",
+      "/graph-demos",
     );
   });
 });

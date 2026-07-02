@@ -3,7 +3,7 @@ import type { EmailToContentOptions } from "@/utils/mail";
 import { internalDateToDate } from "@/utils/date";
 import { emailToContentForAI } from "@/utils/ai/content-sanitizer";
 
-// Convert a ParsedMessage to an EmailForLLM
+// Chokepoint for what signals the AI sees. New fields need to land in EmailForLLM (types.ts) AND be wired here.
 export function getEmailForLLM(
   message: ParsedMessage,
   contentOptions?: EmailToContentOptions,
@@ -24,5 +24,15 @@ export function getEmailForLLM(
       mimeType: attachment.mimeType,
       size: attachment.size,
     })),
+    ...(message.labelIds?.includes("STARRED") ? { flagged: true } : {}),
+    ...(message.mentionedMe !== undefined
+      ? { mentionedMe: message.mentionedMe }
+      : {}),
+    ...(message.hasReminder !== undefined
+      ? { hasReminder: message.hasReminder }
+      : {}),
+    ...(message.isCalendar !== undefined
+      ? { isCalendar: message.isCalendar }
+      : {}),
   };
 }

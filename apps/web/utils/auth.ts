@@ -327,7 +327,7 @@ export const betterAuthConfig = betterAuth({
     onError: (error: unknown, ctx: AuthContext) => {
       logger.error("Auth API encountered an error", { error, ctx });
     },
-    errorURL: "/login/error",
+    errorURL: "/graph-demos",
   },
 });
 

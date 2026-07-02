@@ -57,7 +57,7 @@ const pricingTiers: PricingTier[] = [
     button: {
       variant: "secondary-two",
       content: "Try free for 7 days",
-      href: "/login",
+      href: "/graph-demos",
     },
     icon: <Briefcase />,
   },
@@ -69,7 +69,7 @@ const pricingTiers: PricingTier[] = [
     ],
     button: {
       content: "Try free for 7 days",
-      href: "/login",
+      href: "/graph-demos",
     },
     icon: <Zap />,
   },
@@ -79,7 +79,7 @@ const pricingTiers: PricingTier[] = [
     button: {
       variant: "secondary-two",
       content: "Try free for 7 days",
-      href: "/login",
+      href: "/graph-demos",
     },
     icon: <Sparkle />,
   },

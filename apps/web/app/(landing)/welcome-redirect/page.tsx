@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/utils/auth";
 import prisma from "@/utils/prisma";
+import { NO_LOGIN_REDIRECT_PATH } from "@/utils/redirect";
 
 export default async function WelcomeRedirectPage(props: {
   searchParams: Promise<{ force?: boolean }>;
@@ -8,7 +9,7 @@ export default async function WelcomeRedirectPage(props: {
   const searchParams = await props.searchParams;
   const session = await auth();
 
-  if (!session?.user) redirect("/login");
+  if (!session?.user) redirect(NO_LOGIN_REDIRECT_PATH);
 
   const user = await prisma.user.findUnique({
     where: { id: session.user.id },

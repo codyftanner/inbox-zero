@@ -7,7 +7,7 @@ import { BasicLayout } from "@/components/layouts/BasicLayout";
 
 export default function LogoutPage() {
   useEffect(() => {
-    logOut("/login");
+    logOut("/graph-demos");
   }, []);
 
   return (

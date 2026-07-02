@@ -1,5 +1,6 @@
 "use client";
 
+// NOT USED — the active test/rules/history/settings UI is AutomationTabs in ../automation/AutomationTabs.tsx
 import { XIcon } from "lucide-react";
 import { useCallback } from "react";
 import { useQueryState } from "nuqs";
@@ -42,7 +43,7 @@ export function AssistantTabs() {
           <TabsContent value="rules" className="content-container pb-4">
             <Rules />
           </TabsContent>
-          <TabsContent value="test" className="content-container pb-4">
+          <TabsContent value="test" className="pb-4">
             <Process />
           </TabsContent>
           <TabsContent value="history" className="content-container pb-4">

@@ -1,5 +1,7 @@
 import { normalizeInternalPath } from "@/utils/path";
 
+export const NO_LOGIN_REDIRECT_PATH = "/graph-demos";
+
 type SafeRedirectUrlOptions = {
   allowExternal?: boolean;
   fallbackUrl?: `/${string}`;
@@ -26,9 +28,9 @@ export function buildRedirectUrl(
 
 export function buildLoginRedirectUrl(nextPath: string | null | undefined) {
   const normalizedNextPath = normalizeInternalPath(nextPath);
-  if (!normalizedNextPath) return "/login";
+  if (!normalizedNextPath) return NO_LOGIN_REDIRECT_PATH;
 
-  return buildRedirectUrl("/login", { next: normalizedNextPath });
+  return buildRedirectUrl(NO_LOGIN_REDIRECT_PATH, { next: normalizedNextPath });
 }
 
 export function getSafeRedirectUrl(

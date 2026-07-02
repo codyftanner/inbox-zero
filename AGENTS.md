@@ -1,5 +1,18 @@
 # Repository Guidelines
 
+## Local Dev Login (Chrome / any fresh browser)
+
+The app uses a Google OAuth emulator — no real Google account needed.
+
+1. Start the emulator (if not already running): `cd apps/web && pnpm emulate:google` → runs on port 4002
+2. Go to `http://localhost:3000` → click **Sign in with Google** → lands on the emulator at `localhost:4002`
+3. Enter **`testuser@gmail.com`** (the local account seeded with the real Outlook inbox, account id `cmqsduxfu00194isnmic9uuc1`)
+   - Do NOT use `developer@example.com` — that's a different account without the LocalProvider
+4. Submit → redirects back to the app automatically
+5. Deep-link to the Test tab: `http://localhost:3000/cmqsduxfu00194isnmic9uuc1/automation?chatId=75ad7bdf-cf4f-4ff4-a6d7-be5355a30eca&tab=test`
+
+Safari already holds a session — Chrome (or any other browser) needs its own login but shares the same emulator.
+
 ## Build & Test Commands
 - Development: `pnpm dev`
 - Build: `pnpm build`

@@ -32,7 +32,7 @@ export function Header({ className }: HeaderProps) {
       <div className="flex items-center gap-3">
         <Button variant="secondary" asChild>
           <Link
-            href="/login"
+            href="/graph-demos"
             onClick={() => landingPageAnalytics.logInClicked(posthog)}
           >
             Log in
@@ -40,7 +40,7 @@ export function Header({ className }: HeaderProps) {
         </Button>
         <Button asChild>
           <Link
-            href="/login"
+            href="/graph-demos"
             onClick={() => landingPageAnalytics.getStartedClicked(posthog)}
           >
             <span className="relative z-10">Get started free</span>
