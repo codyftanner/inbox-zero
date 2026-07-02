@@ -153,6 +153,29 @@ export function formatRequestPreview(request: GraphRequest) {
   return JSON.stringify(buildRequestPreview(request), null, 2);
 }
 
+export function buildGetMeRequest(): GraphRequest {
+  return {
+    method: "GET",
+    path: "/me?$select=id,displayName,mail,userPrincipalName,jobTitle,officeLocation,mobilePhone,businessPhones",
+  };
+}
+
+export function buildListUsersRequest(
+  options: { query?: string; top?: number } = {},
+): GraphRequest {
+  const top = options.top ?? 10;
+  const select = "id,displayName,mail,userPrincipalName,jobTitle";
+  const query = options.query?.trim();
+  const filter = query
+    ? `&$filter=startswith(displayName,'${escapeODataString(query)}') or startswith(userPrincipalName,'${escapeODataString(query)}')`
+    : "";
+
+  return {
+    method: "GET",
+    path: `/users?$top=${top}&$select=${select}${filter}`,
+  };
+}
+
 export function buildCreateDraftRequest(options: {
   to: string;
   subject: string;
@@ -199,6 +222,81 @@ export function buildMarkMessageReadRequest(options: {
   };
 }
 
+export function buildListInboxMessagesRequest(
+  options: { top?: number } = {},
+): GraphRequest {
+  const top = options.top ?? 12;
+  const select = [
+    "id",
+    "conversationId",
+    "receivedDateTime",
+    "from",
+    "subject",
+    "bodyPreview",
+    "isRead",
+    "hasAttachments",
+    "webLink",
+  ].join(",");
+
+  return {
+    method: "GET",
+    path: `/me/mailFolders/inbox/messages?$top=${top}&$select=${select}&$orderby=receivedDateTime desc`,
+  };
+}
+
+export function buildCreateReplyDraftRequest(messageId: string): GraphRequest {
+  return {
+    method: "POST",
+    path: `/me/messages/${encodeURIComponent(messageId)}/createReply`,
+    body: {},
+  };
+}
+
+export function buildCreateReplyAllDraftRequest(
+  messageId: string,
+): GraphRequest {
+  return {
+    method: "POST",
+    path: `/me/messages/${encodeURIComponent(messageId)}/createReplyAll`,
+    body: {},
+  };
+}
+
+export function buildUpdateReplyDraftRequest(options: {
+  draftId: string;
+  bodyHtml: string;
+}): GraphRequest {
+  return {
+    method: "PATCH",
+    path: `/me/messages/${encodeURIComponent(options.draftId)}`,
+    body: {
+      body: {
+        contentType: "html",
+        content: options.bodyHtml,
+      },
+    },
+  };
+}
+
+export function buildSendDraftRequest(draftId: string): GraphRequest {
+  return {
+    method: "POST",
+    path: `/me/messages/${encodeURIComponent(draftId)}/send`,
+    body: {},
+  };
+}
+
+export function buildReplyBodyHtml(replyText: string, existingDraftHtml = "") {
+  const paragraphs = replyText
+    .split(/\n{2,}|\n/)
+    .map((paragraph) => paragraph.trim())
+    .filter(Boolean)
+    .map((paragraph) => `<p>${escapeHtml(paragraph)}</p>`)
+    .join("");
+
+  return `<html><body>${paragraphs}${existingDraftHtml}</body></html>`;
+}
+
 export function buildCreateEventRequest(options: {
   subject: string;
   start: string;
@@ -208,6 +306,32 @@ export function buildCreateEventRequest(options: {
   return {
     method: "POST",
     path: "/me/events",
+    body: {
+      subject: options.subject,
+      start: { dateTime: options.start, timeZone: options.timeZone },
+      end: { dateTime: options.end, timeZone: options.timeZone },
+    },
+  };
+}
+
+export function buildListEventsRequest(options: { top?: number } = {}) {
+  const top = options.top ?? 10;
+  return {
+    method: "GET",
+    path: `/me/events?$top=${top}&$select=id,subject,start,end,location,isOnlineMeeting,webLink&$orderby=start/dateTime`,
+  } satisfies GraphRequest;
+}
+
+export function buildUpdateEventRequest(options: {
+  eventId: string;
+  subject: string;
+  start: string;
+  end: string;
+  timeZone: string;
+}): GraphRequest {
+  return {
+    method: "PATCH",
+    path: `/me/events/${encodeURIComponent(options.eventId)}`,
     body: {
       subject: options.subject,
       start: { dateTime: options.start, timeZone: options.timeZone },
@@ -239,6 +363,22 @@ export function buildCreateOnlineMeetingRequest(options: {
   };
 }
 
+export function buildListDriveRootRequest(options: { top?: number } = {}) {
+  const top = options.top ?? 10;
+  return {
+    method: "GET",
+    path: `/me/drive/root/children?$top=${top}&$select=id,name,size,folder,file,webUrl,lastModifiedDateTime`,
+  } satisfies GraphRequest;
+}
+
+export function buildListRecentFilesRequest(options: { top?: number } = {}) {
+  const top = options.top ?? 10;
+  return {
+    method: "GET",
+    path: `/me/drive/recent?$top=${top}&$select=id,name,size,folder,file,webUrl,lastModifiedDateTime`,
+  } satisfies GraphRequest;
+}
+
 export function buildCreateDriveFileRequest(content: string): GraphRequest {
   return {
     method: "PUT",
@@ -255,6 +395,14 @@ export function buildDeleteDriveItemRequest(itemId: string): GraphRequest {
   };
 }
 
+export function buildListPeopleRequest(options: { top?: number } = {}) {
+  const top = options.top ?? 10;
+  return {
+    method: "GET",
+    path: `/me/people?$top=${top}&$select=id,displayName,mail,userPrincipalName,jobTitle,scoredEmailAddresses`,
+  } satisfies GraphRequest;
+}
+
 export function buildCreateTaskRequest(options: {
   listId: string;
   title: string;
@@ -266,6 +414,37 @@ export function buildCreateTaskRequest(options: {
   };
 }
 
+export function buildListTaskListsRequest(): GraphRequest {
+  return { method: "GET", path: "/me/todo/lists" };
+}
+
+export function buildListTasksRequest(options: {
+  listId: string;
+  top?: number;
+}): GraphRequest {
+  const top = options.top ?? 10;
+  return {
+    method: "GET",
+    path: `/me/todo/lists/${encodeURIComponent(options.listId)}/tasks?$top=${top}&$select=id,title,status,createdDateTime,dueDateTime`,
+  };
+}
+
+export function buildUpdateTaskRequest(options: {
+  listId: string;
+  taskId: string;
+  title?: string;
+  status?: "notStarted" | "completed";
+}): GraphRequest {
+  return {
+    method: "PATCH",
+    path: `/me/todo/lists/${encodeURIComponent(options.listId)}/tasks/${encodeURIComponent(options.taskId)}`,
+    body: {
+      ...(options.title ? { title: options.title } : {}),
+      ...(options.status ? { status: options.status } : {}),
+    },
+  };
+}
+
 export function buildDeleteTaskRequest(options: {
   listId: string;
   taskId: string;
@@ -273,6 +452,28 @@ export function buildDeleteTaskRequest(options: {
   return {
     method: "DELETE",
     path: `/me/todo/lists/${encodeURIComponent(options.listId)}/tasks/${encodeURIComponent(options.taskId)}`,
+  };
+}
+
+export function buildListChatsRequest(options: { top?: number } = {}) {
+  const top = options.top ?? 10;
+  return {
+    method: "GET",
+    path: `/me/chats?$top=${top}`,
+  } satisfies GraphRequest;
+}
+
+export function buildListJoinedTeamsRequest(): GraphRequest {
+  return {
+    method: "GET",
+    path: "/me/joinedTeams",
+  };
+}
+
+export function buildListChannelsRequest(teamId: string): GraphRequest {
+  return {
+    method: "GET",
+    path: `/teams/${encodeURIComponent(teamId)}/channels`,
   };
 }
 
@@ -338,6 +539,19 @@ function toRecipients(value: string) {
     .map((email) => email.trim())
     .filter(Boolean)
     .map((address) => ({ emailAddress: { address } }));
+}
+
+function escapeHtml(value: string) {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function escapeODataString(value: string) {
+  return value.replace(/'/g, "''");
 }
 
 function base64UrlDecode(value: string) {

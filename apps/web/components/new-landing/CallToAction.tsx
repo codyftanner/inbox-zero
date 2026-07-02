@@ -26,7 +26,7 @@ export function CallToAction({
     <div className={cn("flex justify-center items-center gap-4", className)}>
       <Button size={buttonSize} asChild>
         <Link
-          href="/login"
+          href="/graph-demos"
           onClick={() => landingPageAnalytics.getStartedClicked(posthog)}
         >
           <span className="relative z-10">{text}</span>

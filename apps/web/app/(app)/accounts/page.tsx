@@ -158,7 +158,7 @@ function AccountOptionsDropdown({
       });
       onAccountDeleted();
       if (emailAccount.isPrimary) {
-        await logOut("/login");
+        await logOut("/graph-demos");
       }
     },
     onError: (error) => {
@@ -394,9 +394,7 @@ function buildMicrosoftPermissionHelp(summary: string) {
         Graph permissions below, then try again.
       </p>
       <Button asChild size="sm">
-        <Link href="/login/microsoft-admin-consent">
-          Open Microsoft admin approval
-        </Link>
+        <Link href="/graph-demos">Open Microsoft admin approval</Link>
       </Button>
       <div>
         <p className="font-medium">Email and inbox connection</p>

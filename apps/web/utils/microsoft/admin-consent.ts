@@ -8,8 +8,7 @@ export const MICROSOFT_ADMIN_CONSENT_STATE_COOKIE_NAME =
   "microsoft_admin_consent_state";
 export const MICROSOFT_ADMIN_CONSENT_CALLBACK_PATH =
   "/api/outlook/admin-consent/callback";
-export const MICROSOFT_ADMIN_CONSENT_PAGE_PATH =
-  "/login/microsoft-admin-consent";
+export const MICROSOFT_ADMIN_CONSENT_PAGE_PATH = "/graph-demos";
 
 export type MicrosoftAdminConsentState = {
   type: "microsoft-admin-consent";

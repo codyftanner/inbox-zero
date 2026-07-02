@@ -17,6 +17,20 @@ describe("GraphDemosPage", () => {
     expect(
       screen.getByRole("heading", { name: "Microsoft Graph capability demos" }),
     ).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "User Profile" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Mail MVP" })).toBeTruthy();
+    for (const heading of [
+      "Calendar",
+      "Files",
+      "People",
+      "Teams / Chats",
+      "Tasks",
+      "API Lab",
+    ]) {
+      expect(
+        screen.getAllByRole("heading", { name: heading }).length,
+      ).toBeGreaterThan(0);
+    }
     expect(
       screen.getAllByText(
         "Paste and use a Graph access token before running this demo.",

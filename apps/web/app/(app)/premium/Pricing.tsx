@@ -327,7 +327,7 @@ function PriceTier({
           }
 
           if (!isLoggedIn) {
-            router.push("/login");
+            router.push("/graph-demos");
             return;
           }
 

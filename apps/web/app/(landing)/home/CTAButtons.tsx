@@ -12,7 +12,7 @@ export function CTAButtons() {
         <Button
           size="2xl"
           color="blue"
-          link={{ href: "/login" }}
+          link={{ href: "/graph-demos" }}
           onClick={() => landingPageAnalytics.getStartedClicked(posthog)}
         >
           Get Started for Free

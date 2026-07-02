@@ -45,9 +45,7 @@ export default function AcceptInvitationPage() {
         if (!user) {
           setHasProcessed(true);
           setInvitationCookie(invitationId);
-          router.push(
-            `/login?next=/organizations/invitations/${invitationId}/accept`,
-          );
+          router.push("/graph-demos");
           return;
         }
 

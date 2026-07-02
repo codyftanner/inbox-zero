@@ -21,6 +21,7 @@ import { AnnouncementDialog } from "@/components/feature-announcements/Announcem
 import { captureException } from "@/utils/error";
 import prisma from "@/utils/prisma";
 import { createScopedLogger } from "@/utils/logger";
+import { NO_LOGIN_REDIRECT_PATH } from "@/utils/redirect";
 
 const logger = createScopedLogger("AppLayout");
 
@@ -51,7 +52,7 @@ export default async function AppLayout({
 }) {
   const session = await auth();
 
-  if (!session?.user.email) redirect("/login");
+  if (!session?.user.email) redirect(NO_LOGIN_REDIRECT_PATH);
 
   const cookieStore = await cookies();
   const isClosed = cookieStore.get("left-sidebar:state")?.value === "false";
